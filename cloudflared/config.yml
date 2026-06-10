@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cloudflare Tunnel Configuration
+# 
+# Exposes your self-hosted backend through Cloudflare's edge network
+# Replaces the need for open ports on your VPS
+# 
+# Setup:
+#   1. Create tunnel: cloudflare zero trust → tunnels → create
+#   2. Get tunnel ID and save credentials
+#   3. Fill in YOUR_TUNNEL_ID below
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Tunnel identifier (obtained from Cloudflare Zero Trust console)
+tunnel: YOUR_TUNNEL_ID_HERE
+
+# Path to credentials file (will be mounted from docker volume)
+credentials-file: /root/.cloudflared/cert.pem
+
+# Log configuration
+logLevel: info
+
+# Ingress rules: Route public domain to internal services
+ingress:
+  # Main app: route to Nginx (handles SSL termination + WS proxy)
+  - hostname: bustrack.yourdomain.com
+    service: https://nginx:443
+    originRequest:
+      # Don't verify Nginx's self-signed cert (internal service)
+      noTLSVerify: false
+      # Enable HTTP/2 for faster multiplexing
+      http2Origin: https://nginx:443
+      # Custom headers (optional)
+      headers:
+        X-Origin-CA-Cert: /etc/ssl/certs/ca-certificates.crt
+
+  # Fallback: catch-all for unknown domains
+  - service: http_status:404
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USAGE:
+#
+# 1. Update YOUR_TUNNEL_ID with actual tunnel ID from Cloudflare
+# 2. Update bustrack.yourdomain.com with your actual domain
+# 3. Mount this file in docker-compose.yml:
+#    volumes:
+#      - ./cloudflared/config.yml:/root/.cloudflared/config.yml:ro
+#      - ./cloudflared/cert.pem:/root/.cloudflared/cert.pem:ro
+# 4. Update PUBLIC_URL and CORS_ORIGINS in .env with the tunnel domain
+# ─────────────────────────────────────────────────────────────────────────────

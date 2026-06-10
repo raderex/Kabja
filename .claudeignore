@@ -1,0 +1,22 @@
+# Version Control
+.git/
+
+# Heavy Data & Binaries (The biggest culprits)
+osrm_data/
+
+# Python Environment (Backend)
+backend/.venv/
+**/__pycache__/
+
+# Flutter & Dart Caches (Frontend)
+flutter/build/
+flutter/.dart_tool/
+flutter/out/
+flutter/.idea/
+flutter/android/
+flutter/ios/
+
+# Logs & Environment Variables
+*.log
+.env
+.env.*

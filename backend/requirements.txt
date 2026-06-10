@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════════════
+#  KTM Bus Tracker — Python Dependencies
+#  Requires Python 3.11 (NOT 3.14 — no pre-built wheels exist yet)
+#  All versions below have pre-built manylinux wheels for py3.11.
+#  Zero compilation required.
+# ═══════════════════════════════════════════════════════════════════
+
+fastapi==0.111.1
+uvicorn[standard]==0.30.1
+redis[hiredis]==5.0.6
+httpx>=0.27.0
+python-jose[cryptography]==3.3.0
+pydantic==2.7.4
+pydantic-settings==2.3.1
+python-multipart==0.0.9
+asyncpg==0.29.0
+SQLAlchemy[asyncio]>=2.0
+alembic>=1.13
+h3>=3.7.6
+APScheduler>=3.10
+polyline>=2.0

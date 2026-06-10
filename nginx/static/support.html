@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support — KTM School Bus Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.75; color: #1a1a1a; background: #fafaf9; padding: 48px 24px;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; color: #1B5E20; }
+  .meta { color: #666; margin-bottom: 40px; font-size: 0.9rem; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: 32px 0 12px; color: #222; }
+  p { margin-bottom: 14px; color: #333; }
+  .card {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 12px;
+    padding: 24px; margin-bottom: 20px;
+  }
+  .card h3 { font-size: 1rem; margin-bottom: 8px; }
+  a { color: #1B5E20; }
+  .badge {
+    display: inline-block; background: #E8F5E9; color: #1B5E20;
+    padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; margin-left: 8px;
+  }
+  .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #e5e5e5;
+            font-size: 0.85rem; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Support</h1>
+  <p class="meta">KTM School Bus Tracker &nbsp;|&nbsp; We're here to help</p>
+
+  <p>KTM School Bus Tracker helps parents in the Kathmandu Valley track their
+  child's school bus in real time. If you're experiencing issues, please check
+  the FAQ below before contacting us.</p>
+
+  <h2>Frequently Asked Questions</h2>
+
+  <div class="card">
+    <h3>The bus isn't showing on the map <span class="badge">Parent App</span></h3>
+    <p>The bus marker appears only when the driver has started tracking and the
+    device has a GPS signal. If school hasn't started yet or the driver hasn't
+    opened the Driver App, no marker will show. Try pulling down to refresh.
+    If the bus was recently active and disappeared, it may have lost signal temporarily.</p>
+  </div>
+
+  <div class="card">
+    <h3>ETA shows "—" instead of a time <span class="badge">Parent App</span></h3>
+    <p>ETA is calculated based on live routing data. It appears after the first
+    GPS ping is received and a route to the school has been computed. Allow
+    10–15 seconds after the bus appears on the map.</p>
+  </div>
+
+  <div class="card">
+    <h3>Background tracking stopped on iOS <span class="badge">Driver App</span></h3>
+    <p>iOS may suspend background apps to save battery. To prevent this:
+    go to <strong>Settings → General → Background App Refresh</strong> and
+    enable it for KTM Bus Driver. Also ensure Location is set to
+    <strong>Always</strong> under Settings → Privacy → Location Services →
+    KTM Bus Driver.</p>
+  </div>
+
+  <div class="card">
+    <h3>Background tracking stopped on Android <span class="badge">Driver App</span></h3>
+    <p>Some Android manufacturers (Xiaomi, OPPO, Huawei) aggressively kill
+    background apps. Go to <strong>Settings → Battery → App battery management</strong>
+    and set KTM Bus Driver to "No restrictions". Also disable battery optimisation
+    for the app.</p>
+  </div>
+
+  <div class="card">
+    <h3>How do I set up a new route?</h3>
+    <p>Route setup requires admin access. Please contact your school's transport
+    administrator. They can create routes and assign buses via the Admin Panel.</p>
+  </div>
+
+  <div class="card">
+    <h3>Is my child's location tracked?</h3>
+    <p>No. Only the <strong>bus driver's</strong> device location is tracked.
+    The app does not collect any data from children or student devices.
+    See our <a href="/privacy">Privacy Policy</a> for full details.</p>
+  </div>
+
+  <h2>Contact Support</h2>
+  <p>If your issue isn't covered above, please email us and include:</p>
+  <ul style="padding-left:24px; margin-bottom:16px; color:#333;">
+    <li>Your role (Parent / Driver)</li>
+    <li>Device model and OS version</li>
+    <li>Description of the problem</li>
+    <li>Screenshot if possible</li>
+  </ul>
+  <p>📧 <a href="mailto:support@yourdomain.com">support@yourdomain.com</a></p>
+  <p>We aim to respond within 1 business day (Mon–Fri, 9am–5pm NPT).</p>
+
+  <div class="footer">
+    &copy; 2025 KTM School Bus Tracker &nbsp;|&nbsp;
+    <a href="/privacy">Privacy Policy</a>
+  </div>
+
+</div>
+</body>
+</html>

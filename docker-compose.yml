@@ -1,0 +1,214 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Kabja — Territory Running App — Docker Compose  v4
+#  Stack: FastAPI · Redis 7 · PostgreSQL 16 · OSRM · Nginx (SSL)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+networks:
+  kabja_net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  osrm_data:
+  postgres_data:
+  certbot_certs:
+  certbot_www:
+
+services:
+
+  # ─────────────────────────────────────────────────────
+  #  Redis 7
+  # ─────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: kabja_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass "${REDIS_PASSWORD}"
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kabja_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────
+  #  PostgreSQL 16 — trip_history audit trail
+  # ─────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: kabja_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       "${POSTGRES_DB:-openrun}"
+      POSTGRES_USER:     "${POSTGRES_USER:-openrun}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kabja_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openrun} -d ${POSTGRES_DB:-openrun}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  # ─────────────────────────────────────────────────────
+  #  OSRM — Nepal routing engine
+  #
+  #  One-time data prep BEFORE compose up:
+  #    mkdir -p osrm_data
+  #    wget https://download.geofabrik.de/asia/nepal-latest.osm.pbf -P osrm_data/
+  #
+  #    docker run --rm -t -v $(pwd)/osrm_data:/data \
+  #      ghcr.io/project-osrm/osrm-backend:v5.27.1 \
+  #      osrm-extract -p /opt/car.lua /data/nepal-latest.osm.pbf
+  #
+  #    docker run --rm -t -v $(pwd)/osrm_data:/data \
+  #      ghcr.io/project-osrm/osrm-backend:v5.27.1 \
+  #      osrm-partition /data/nepal-latest.osrm
+  #
+  #    docker run --rm -t -v $(pwd)/osrm_data:/data \
+  #      ghcr.io/project-osrm/osrm-backend:v5.27.1 \
+  #      osrm-customize /data/nepal-latest.osrm
+  # ─────────────────────────────────────────────────────
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    container_name: kabja_osrm
+    restart: unless-stopped
+    command: >
+      osrm-routed
+      --algorithm ch
+      --port 5000
+      --max-table-size 1000
+      /data/nepal-latest.osrm
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - ./osrm_data:/data
+    networks:
+      - kabja_net
+
+  # ─────────────────────────────────────────────────────
+  #  FastAPI v3
+  # ─────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kabja_api
+    restart: unless-stopped
+    environment:
+      JWT_SECRET:              "${JWT_SECRET}"
+      JWT_ALGORITHM:           "HS256"
+      JWT_EXPIRE_MINUTES:      "1440"
+      REDIS_HOST:              redis
+      REDIS_PORT:              "6379"
+      REDIS_PASSWORD:          "${REDIS_PASSWORD}"
+      POSTGRES_HOST:           postgres
+      POSTGRES_PORT:           "5432"
+      POSTGRES_DB:             "${POSTGRES_DB:-openrun}"
+      POSTGRES_USER:           "${POSTGRES_USER:-openrun}"
+      POSTGRES_PASSWORD:       "${POSTGRES_PASSWORD}"
+      DATABASE_URL:            "postgresql://${POSTGRES_USER:-openrun}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-openrun}"
+      OSRM_HOST:               "http://osrm:5000"
+      PUBLIC_URL:              "${PUBLIC_URL:-https://bustrack.yourdomain.com}"
+      CORS_ORIGINS:            "${CORS_ORIGINS:-https://bustrack.yourdomain.com}"
+      OTP_PROVIDER:            "${OTP_PROVIDER:-telegram}"
+      TELEGRAM_BOT_TOKEN:      "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_BOT_NAME:       "${TELEGRAM_BOT_NAME:-KTMBusTrackerBot}"
+      TELEGRAM_WEBHOOK_SECRET: "${TELEGRAM_WEBHOOK_SECRET:-}"
+      AAKASH_API_KEY:          "${AAKASH_API_KEY:-}"
+      SPARROW_TOKEN:           "${SPARROW_TOKEN:-}"
+      FCM_SERVER_KEY:          "${FCM_SERVER_KEY:-}"
+      ENVIRONMENT:             "${ENVIRONMENT:-production}"
+    ports:
+      - "8000:8000"  # Waydroid bridge can reach API directly
+      - "8080:8000"  # cloudflared quick tunnel routes to localhost:8080 → maps to container port 8000
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - kabja_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+
+  # ─────────────────────────────────────────────────────
+  #  Cron — competition snapshot job
+  # ─────────────────────────────────────────────────────
+  cron:
+    build: ./backend
+    command: python cron.py
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - kabja_net
+
+  # ─────────────────────────────────────────────────────
+  #  Nginx — SSL, WS proxy, rate limiting
+  # ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: kabja_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/static:/var/www/static:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - kabja_net
+
+  # ─────────────────────────────────────────────────────
+  #  Certbot
+  # ─────────────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: kabja_certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+        while :; do certbot renew --quiet; sleep 12h & wait $${!}; done"
+    networks:
+      - kabja_net

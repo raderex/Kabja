@@ -1,0 +1,68 @@
+name: ktm_bus_tracker
+description: "Kabja — Run. Capture. Dominate. Territory running app."
+version: 4.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Map ────────────────────────────────────────────────────────
+  flutter_map: ^7.0.2
+  flutter_map_tile_caching: ^9.1.2
+  latlong2: ^0.9.1
+
+  # ── Location & background tracking ────────────────────────────
+  geolocator: ^12.0.0
+  permission_handler: ^11.3.1
+
+  # ── Networking ─────────────────────────────────────────────────
+  dio: ^5.4.3
+  web_socket_channel: ^3.0.1
+  h3_flutter: ^0.6.6
+  timer_builder: ^2.0.0
+
+  # ── Auth & Storage ─────────────────────────────────────────────
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.1
+
+  # ── State management ───────────────────────────────────────────
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # ── Animation ──────────────────────────────────────────────────
+  flutter_animate: ^4.5.0
+
+  # ── Navigation ─────────────────────────────────────────────────
+  go_router: ^14.0.2
+
+  # ── UI ─────────────────────────────────────────────────────────
+  google_fonts: ^6.2.1
+
+  # ── Deep links (Telegram OTP) ──────────────────────────────────
+  url_launcher: ^6.3.0
+  app_links: ^6.3.2
+  http: ^1.2.1
+  share_plus: ^10.1.4
+
+  # ── Strava integration ─────────────────────────────────────────
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  lottie: ^3.1.2
+  fl_chart: ^0.69.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  riverpod_generator: ^2.4.3
+
+flutter:
+  uses-material-design: true
+  # Assets directory exists — placeholder PNGs committed via .gitkeep
+  assets:
+    - assets/icons/

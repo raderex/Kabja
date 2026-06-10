@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- This is overridden per-flavor by build.gradle.kts resValue -->
+    <string name="app_name">KTM Bus Track</string>
+</resources>

@@ -1,0 +1,217 @@
+# ============================================================================
+# DOCUMENTATION (Keep only README.md)
+# ============================================================================
+*.md
+!README.md
+
+# ============================================================================
+# SECRETS & ENVIRONMENT
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.*.example
+
+# ============================================================================
+# PYTHON BACKEND
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+backend/venv/
+backend/env/
+
+# Flask, Django, etc.
+instance/
+.webassets-cache
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ============================================================================
+# FLUTTER / DART
+# ============================================================================
+flutter/.dart_tool/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies
+flutter/build/
+flutter/.packages
+flutter/pubspec.lock
+flutter/pubspec.lock.gz
+flutter/.fvm/
+flutter/coverage/
+
+# ============================================================================
+# ANDROID
+# ============================================================================
+flutter/android/.gradle/
+flutter/android/build/
+flutter/android/local.properties
+flutter/android/.classpath
+flutter/android/.project
+flutter/android/.settings/
+flutter/android/gradle-wrapper.jar
+flutter/android/capture/
+flutter/android/.idea/
+flutter/android/*.iml
+
+# ============================================================================
+# iOS
+# ============================================================================
+flutter/ios/Pods/
+flutter/ios/Podfile.lock
+flutter/ios/.symlinks/
+flutter/ios/Flutter/Flutter.podspec
+flutter/ios/build/
+flutter/ios/.idea/
+flutter/ios/Runner/GeneratedPluginRegistrant.*
+
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# ============================================================================
+# LOCAL CONFIGURATIONS
+# ============================================================================
+docker-compose.override.yml
+docker-compose.override.yml.local
+nginx/nginx.conf.local
+cloudflared/config.yml
+
+# ============================================================================
+# OSRM DATA (Large binary files)
+# ============================================================================
+osrm_data/*.osrm*
+osrm_data/*.osm.pbf
+osrm_data/*.fileIndex
+osrm_data/*.partition
+osrm_data/*.cells
+osrm_data/*.properties
+osrm_data/*.edges
+osrm_data/*.cnbg*
+osrm_data/*.ebg*
+osrm_data/*.names
+osrm_data/*.ramIndex
+osrm_data/*.geometry
+osrm_data/*.datasource*
+osrm_data/*.turn_*
+osrm_data/*.mldgr
+osrm_data/*.maneuver*
+osrm_data/*.tld*
+osrm_data/*.tls*
+osrm_data/*.hsgr*
+osrm_data/*.icd*
+osrm_data/*.nbg*
+osrm_data/*.enw*
+# Keep directory structure
+!osrm_data/.gitkeep
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+*.log
+*.log.*
+logs/
+tmp/
+temp/
+.tmp/
+*.pid
+
+# ============================================================================
+# CERTIFICATES & SECURITY
+# ============================================================================
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+*.p12
+!example.pem
+
+# ============================================================================
+# BUILD & DIST
+# ============================================================================
+dist/
+build/
+*.apk
+*.ipa
+*.app
+
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# ============================================================================
+# OS SPECIFIC
+# ============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100
+.Trashes
+
+# ============================================================================
+# MISC
+# ============================================================================
+.gradle/
+.idea/
+.cache/
+.directory
+.htaccess
+.aider*

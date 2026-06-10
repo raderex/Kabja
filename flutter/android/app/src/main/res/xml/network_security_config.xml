@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Network Security Configuration for KTM Bus Tracker
+
+Strategy:
+- Production: Enforce HTTPS only
+- Development: Allow HTTP for local testing
+- Default: HTTPS only (safe default)
+
+References:
+- https://developer.android.com/training/articles/security-config
+- Android 9+ enforces SSL/TLS by default
+-->
+<network-security-config>
+    <!--
+    Production domain: Strictly HTTPS only
+    These domains must use encrypted connections
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">bustrack.yourdomain.com</domain>
+        <domain includeSubdomains="true">bustrack.com</domain>
+    </domain-config>
+
+    <!--
+    Development domains: Allow cleartext (HTTP) for local testing
+    
+    192.168.240.1
+      = Waydroid Android emulator bridge IP
+      = Used for local dev with docker compose
+      = Always HTTP (not HTTPS)
+    
+    10.0.2.2
+      = Android Emulator loopback to host machine
+      = Used when testing with Google Play Emulator
+      = Can be HTTP or HTTPS depending on setup
+    
+    localhost, 127.0.0.1
+      = Local machine testing
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.240.1</domain>  <!-- Waydroid bridge -->
+        <domain includeSubdomains="true">10.0.2.2</domain>       <!-- Android Emulator -->
+        <domain includeSubdomains="true">localhost</domain>      <!-- Local loopback -->
+        <domain includeSubdomains="true">127.0.0.1</domain>      <!-- Local IPv4 -->
+    </domain-config>
+
+    <!--
+    Default: HTTPS only (secure by default)
+    Any domain not explicitly listed above must use HTTPS
+    This is the safe fallback for production
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">.</domain>
+    </domain-config>
+</network-security-config>

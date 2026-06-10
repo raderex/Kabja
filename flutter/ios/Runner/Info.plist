@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  flutter/ios/Runner/Info.plist
+  ══════════════════════════════
+  Required entries for:
+    • Background location (Driver App — App Store mandatory)
+    • Network access
+    • App Store metadata
+-->
+<plist version="1.0">
+<dict>
+
+  <!-- ── App Identity ───────────────────────────────────────────── -->
+  <key>CFBundleName</key>
+  <string>KTM School Bus</string>
+
+  <key>CFBundleDisplayName</key>
+  <string>KTM School Bus</string>
+
+  <key>CFBundleIdentifier</key>
+  <string>com.ktmbustrack.app</string>
+
+  <key>CFBundleVersion</key>
+  <string>1</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>2.0.0</string>
+
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+
+  <key>CFBundleSignature</key>
+  <string>????</string>
+
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+
+  <!-- ── Location Permissions (App Store REQUIRED) ──────────────── -->
+
+  <!-- Foreground location — shown to ALL users on first launch -->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>KTM School Bus Tracker shows your child's bus on the map and calculates when it will arrive at your stop.</string>
+
+  <!-- Background + always-on — shown to DRIVER users only -->
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>Driver mode needs to track your location in the background so parents can see the bus moving even when your phone screen is off.</string>
+
+  <key>NSLocationAlwaysUsageDescription</key>
+  <string>Driver mode requires always-on location so the bus appears live on parents' maps throughout the school run.</string>
+
+  <!-- ── Background Modes ────────────────────────────────────────── -->
+  <!-- location: GPS tracking while app is backgrounded (Driver)     -->
+  <!-- fetch:    allows periodic data refresh                        -->
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>location</string>
+    <string>fetch</string>
+  </array>
+
+  <!-- ── Network ───────────────────────────────────────────────── -->
+  <!-- Allow HTTP for local dev; production uses HTTPS only         -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <!-- Remove NSAllowsArbitraryLoads in production -->
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <!-- Allow localhost for dev/testing -->
+      <key>localhost</key>
+      <dict>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+      </dict>
+    </dict>
+  </dict>
+
+  <!-- ── UI ────────────────────────────────────────────────────── -->
+  <key>UILaunchStoryboardName</key>
+  <string>LaunchScreen</string>
+
+  <key>UIMainStoryboardFile</key>
+  <string>Main</string>
+
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <false/>
+
+  <!-- ── Strava OAuth deep link ────────────────────────────────── -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>kabja</string>
+      </array>
+      <key>CFBundleURLName</key>
+      <string>com.kabja.strava</string>
+    </dict>
+  </array>
+
+  <!-- ── Flutter ───────────────────────────────────────────────── -->
+  <key>CADisableMinimumFrameDurationOnPhone</key>
+  <true/>
+
+  <key>UIApplicationSupportsIndirectInputEvents</key>
+  <true/>
+
+</dict>
+</plist>
