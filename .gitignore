@@ -1,8 +1,10 @@
 # ============================================================================
 # DOCUMENTATION (Keep only README.md)
 # ============================================================================
-*.md
 !README.md
+# Note: *.md files are NOT globally ignored — agent briefs need to be committed
+# Add specific secret docs here instead:
+# secrets*.md
 
 # ============================================================================
 # SECRETS & ENVIRONMENT

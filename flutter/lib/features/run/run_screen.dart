@@ -29,6 +29,8 @@ class _RunScreenState extends ConsumerState<RunScreen> {
   LatLng? _lastPos;
   Timer? _updateTimer;
   Timer? _tickTimer;
+  bool _gpsWarmedUp = false;
+  DateTime? _gpsWarmupStart;
 
   @override
   void dispose() {
@@ -57,6 +59,8 @@ class _RunScreenState extends ConsumerState<RunScreen> {
         _distance = 0;
         _pace = 0;
         _elapsed = Duration.zero;
+        _gpsWarmedUp = false;
+        _gpsWarmupStart = null;
       });
       _startGps();
       _startTick();
@@ -65,10 +69,18 @@ class _RunScreenState extends ConsumerState<RunScreen> {
   }
 
   void _startGps() {
+    _gpsWarmupStart = DateTime.now();
+    _gpsWarmedUp = false;
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high, distanceFilter: 3),
     ).listen((pos) {
+      if (!_gpsWarmedUp) {
+        if (DateTime.now().difference(_gpsWarmupStart!).inSeconds < 60) {
+          return;
+        }
+        _gpsWarmedUp = true;
+      }
       final current = LatLng(pos.latitude, pos.longitude);
       if (_lastPos != null) {
         _distance += Geolocator.distanceBetween(
@@ -95,6 +107,7 @@ class _RunScreenState extends ConsumerState<RunScreen> {
   void _startUpdates() {
     _updateTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (_state != RunState.running || _lastPos == null || _runId == null) return;
+      if (!_gpsWarmedUp) return;
       final auth = ref.read(authProvider);
       try {
         await http.post(
@@ -206,6 +219,29 @@ class _RunScreenState extends ConsumerState<RunScreen> {
           child: Column(
             children: [
               const Spacer(flex: 2),
+              if (_state == RunState.running && !_gpsWarmedUp)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 14, height: 14,
+                        child: CircularProgressIndicator(
+                            color: AppColors.accent, strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('Acquiring GPS signal...',
+                          style: GoogleFonts.inter(
+                              fontSize: 12, color: AppColors.accent)),
+                    ],
+                  ),
+                ),
               Text(_formatDuration(_elapsed),
                   style: GoogleFonts.bebasNeue(
                       fontSize: 72, color: AppColors.textPrimary, letterSpacing: 2)),

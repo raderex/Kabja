@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
@@ -68,7 +69,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        data['url'] as String;
+        final url = data['url'] as String;
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
       }
     } catch (_) {}
     setState(() => _stravaLoading = false);
