@@ -118,7 +118,7 @@ async def _save_run(session: dict, snapped_polyline: list[list], cells: set[str]
     async with AsyncSessionLocal() as db:
         async with db.begin():
             await db.execute('INSERT INTO users (id, username, created_at) VALUES (:id, :username, now()) ON CONFLICT (id) DO NOTHING', {'id': user_id, 'username': session.get('username', user_id)})
-            await db.execute('INSERT INTO runs (id, user_id, started_at, finished_at, distance_km, polyline, snapped_polyline, status) VALUES (:id, :uid, :started, :finished, :dist, :poly, :snapped, :status) ON CONFLICT (id) DO NOTHING', {
+            await db.execute('INSERT INTO runs (id, user_id, started_at, finished_at, distance_km, polyline, snapped_polyline, status, source) VALUES (:id, :uid, :started, :finished, :dist, :poly, :snapped, :status, :source) ON CONFLICT (id) DO NOTHING', {
                 'id': session['run_id'],
                 'uid': user_id,
                 'started': session.get('started_at'),
@@ -127,4 +127,5 @@ async def _save_run(session: dict, snapped_polyline: list[list], cells: set[str]
                 'poly': json.dumps(session.get('polyline', [])),
                 'snapped': json.dumps(snapped_polyline),
                 'status': 'finished',
+                'source': session.get('source', 'kabja'),
             })

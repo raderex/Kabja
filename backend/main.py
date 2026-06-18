@@ -10,8 +10,8 @@ New in v3 (production-grade additions):
   ⑥ WS role enforcement     — parents validated against their subscribed routes
 
 Redis key schema:
-  bus:{bus_id}:loc              HASH   {lat,lng,speed,bearing,ts,route_id}  TTL=30s
-  route:{route_id}:buses        SET    {bus_id …}
+   bus:{bus_id}:loc              HASH   {lat,lng,speed,bearing,ts,route_id}  TTL=30s  # legacy – bus tracking
+   route:{route_id}:buses        SET    {bus_id …}  # legacy – bus tracking
   otp:{identifier}              STRING {code:{ts}                           TTL=300s
   otp_rate:{identifier}         STRING 1                                     TTL=60s
   tg_pending:{chat_id}          STRING pending                               TTL=600s
@@ -52,6 +52,7 @@ from fastapi import (
 )
 import urllib.parse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 import h3
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -122,6 +123,17 @@ class GPSPing(BaseModel):
     accuracy: float = Field(10.0, ge=0)
 
 
+class AuthResponse(BaseModel):
+    access_token: str
+    user_id: str
+    username: str
+    display_name: str
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str = ""
+
 class LoginBody(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
@@ -191,6 +203,7 @@ async def get_redis() -> aioredis.Redis:
 #     pipe.expire(f"bus:{ping.bus_id}:loc", GPS_TTL_SECONDS)
 #     pipe.sadd(f"route:{ping.route_id}:buses", ping.bus_id)
 #     await pipe.execute()
+
 
 
 async def get_bus_location(bus_id: str) -> dict[str, str] | None:
@@ -378,6 +391,7 @@ async def compute_and_push_eta(ping: GPSPing) -> None:
         r = data["routes"][0]
         duration_s = r["duration"]
         eta_dt = datetime.now(tz=timezone.utc) + timedelta(seconds=duration_s)
+                
         await ws_manager.broadcast(ping.route_id, {
             "type":       "eta",
             "bus_id":     ping.bus_id,
@@ -488,33 +502,9 @@ async def lifespan(app: FastAPI):
                 log.debug("Stale WS check error: %s", exc)
 
     async def _check_stale_buses():
-        """Detect buses with no GPS for >45 seconds and broadcast a stale frame.
-        For each bus we inspect its location hash timestamp. If missing or older than 45 s,
-        a message `{\"type\": \"stale\", \"bus_id\": <bus_id>}` is sent to all clients on that
-        bus's route via the existing `ws_manager` broadcaster.
-        """
-        while True:
-            await asyncio.sleep(45)
-            try:
-                r = await get_redis()
-                route_keys = await r.keys("route:*:buses")
-                for rk in route_keys:
-                    route_id = rk.split(":")[1]
-                    bus_ids = await r.smembers(rk)
-                    for bus_id in bus_ids:
-                        loc_key = f"bus:{bus_id}:loc"
-                        ts_str = await r.hget(loc_key, "ts")
-                        if not ts_str:
-                            await ws_manager.broadcast(route_id, {"type": "stale", "bus_id": bus_id})
-                            continue
-                        try:
-                            ts = float(ts_str)
-                        except ValueError:
-                            continue
-                        if time.time() - ts > 45:
-                            await ws_manager.broadcast(route_id, {"type": "stale", "bus_id": bus_id})
-            except Exception as exc:
-                log.debug("Stale bus detection error: %s", exc)
+        """Legacy bus stale detection disabled."""
+        # No operation
+        pass
 
     # Start background monitor tasks
     stale_ws_task = asyncio.create_task(_check_stale_ws())
@@ -590,6 +580,38 @@ async def tracking_info(tracking_code: str) -> dict:
 
 # ── User Profile (auth) ────────────────────────────────────────────────────────
 
+@app.get("/api/profile/{user_id}", tags=["auth"])
+async def get_profile(user_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Return full profile for given user_id."""
+    # Query user data
+    result = await db.execute(text(
+        "SELECT u.id, u.username, u.display_name, u.avatar_url, "
+        "u.total_km2, u.total_runs, u.streak_days, u.created_at, "
+        "COUNT(c.h3_index) as live_cell_count "
+        "FROM users u "
+        "LEFT JOIN cells c ON c.owner_id = u.id "
+        "WHERE u.id = :uid GROUP BY u.id"
+    ), {"uid": user_id})
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Strava connection status
+    strava_res = await db.execute(text("SELECT strava_athlete_id FROM users WHERE id = :uid"), {"uid": user_id})
+    strava_row = strava_res.fetchone()
+    strava_connected = bool(strava_row and strava_row[0])
+    return {
+        "user_id": row[0],
+        "username": row[1],
+        "display_name": row[2] or row[1],
+        "avatar_url": row[3],
+        "total_km2": round(row[4] or 0, 4),
+        "total_runs": row[5] or 0,
+        "streak_days": row[6] or 0,
+        "joined_at": row[7].isoformat() if row[7] else None,
+        "live_cell_count": row[8] or 0,
+        "strava_connected": strava_connected,
+    }
+
 @app.get("/api/user/profile", tags=["auth"])
 async def user_profile(claims: dict = Depends(require_any_auth)) -> dict:
     """Return current user's profile information.
@@ -599,7 +621,7 @@ async def user_profile(claims: dict = Depends(require_any_auth)) -> dict:
     role = claims.get("role", "unknown")
     r = await get_redis()
     display_name = user_id
-    user_data = await r.hgetall(f"user:{user_id}:data")
+    user_data = await r.hgetall(f"user:{user_id}")
     if user_data:
         def _d(v):
             return v.decode() if isinstance(v, bytes) else v
@@ -712,7 +734,34 @@ async def _verify_user(r: aioredis.Redis, username: str, password: str) -> str |
 
 
 @app.post("/api/auth/login", tags=["auth"])
-async def login(body: LoginBody) -> dict[str, str]:
+
+@app.post("/api/auth/register", response_model=AuthResponse, tags=["auth"])
+async def register(req: RegisterRequest) -> AuthResponse:
+    """Create new user and issue JWT."""
+    r = await get_redis()
+    key = f"user:{req.username}"
+    if await r.exists(key):
+        raise HTTPException(status_code=409, detail="Username already taken")
+    # Use same password hashing as default seeded users (no salt)
+    pw_hash = _hash_password(req.password)
+    user_id = str(uuid_lib.uuid4())
+    await r.hset(key, mapping={
+        "password_hash": pw_hash,
+        "password_salt": "",
+        "display_name": req.display_name or req.username,
+        "user_id": user_id,
+        "role": "parent",
+    })
+    token = create_token(sub=req.username, role="parent")
+    return AuthResponse(
+        access_token=token,
+        user_id=user_id,
+        username=req.username,
+        display_name=req.display_name or req.username,
+    )
+
+@app.post("/api/auth/login", tags=["auth"])
+async def login(body: LoginBody) -> AuthResponse:
     """
     Authenticate with username + password.
     Superusers (raderex, suman, sumeet, prajwal) bypass password and get
@@ -757,7 +806,16 @@ async def login(body: LoginBody) -> dict[str, str]:
 
     token = create_token(sub=body.username, role=effective_role, extra=extra)
     log.info("Login OK user=%s role=%s superuser=%s", body.username, effective_role, is_superuser)
-    return {"access_token": token, "token_type": "bearer"}
+    # Retrieve stored user_id if available; fall back to username
+    stored_user_id = await r.hget(f"user:{body.username}", "user_id")
+    user_id = stored_user_id or body.username
+    display_name = await r.hget(f"user:{body.username}", "display_name") or body.username
+    return AuthResponse(
+        access_token=token,
+        user_id=user_id,
+        username=body.username,
+        display_name=display_name,
+    )
 
 
 # ═══════════════ RUN TRACKING ENDPOINTS ═══════════════════════════════════════════════
@@ -819,6 +877,31 @@ async def run_start(token: str = Depends(require_any_auth)):
 
 
 @app.post("/api/run/finish")
+async def _update_user_streak(user_id: str, db: aioredis.Redis) -> None:
+    """Increment streak if ran today, reset if gap > 1 day."""
+    from datetime import date, timedelta
+    result = await db.hgetall(f"user:{user_id}")
+    if not result:
+        return
+    last_run = result.get("last_run_date")
+    streak = int(result.get("streak_days") or 0)
+    today = date.today()
+    if not last_run:
+        new_streak = 1
+    else:
+        try:
+            last_date = date.fromisoformat(last_run)
+        except Exception:
+            new_streak = 1
+        else:
+            if last_date < today - timedelta(days=1):
+                new_streak = 1
+            elif last_date == today - timedelta(days=1):
+                new_streak = streak + 1
+            else:
+                new_streak = streak
+    await db.hset(f"user:{user_id}", mapping={"last_run_date": today.isoformat(), "streak_days": str(new_streak)})
+
 async def run_finish(run_id: str, token: str = Depends(require_any_auth)):
     """
     1. Read session from Redis.
@@ -847,6 +930,7 @@ async def run_finish(run_id: str, token: str = Depends(require_any_auth)):
     # Import at top: from territory import process_run
     asyncio.create_task(_run_territory_pipeline(session))
 
+    await _update_user_streak(session.get("user_id", ""), r)
     return {
         "ok": True,
         "run_id": run_id,
@@ -1478,7 +1562,7 @@ async def bus_eta(
     dest_lng: float = Query(..., ge=KTM_BBOX[0], le=KTM_BBOX[2]),
     claims:   dict  = Depends(require_any_auth),
 ) -> ETAResult:
-    loc = await get_bus_location(bus_id)
+    loc = await get_bus_location(bus_id)  
     if not loc:
         raise HTTPException(status_code=404, detail="Bus offline")
     url = (
@@ -1562,7 +1646,7 @@ async def get_route_detail(
     bus_ids = await r.smembers(f"route:{route_id}:buses")
     buses = []
     for bid in bus_ids:
-        loc = await get_bus_location(bid)
+        loc = await get_bus_location(bid)  
         if loc:
             buses.append({"bus_id": bid, **loc})
     return {**route, "buses": buses}

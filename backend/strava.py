@@ -274,6 +274,7 @@ async def import_activity(user_id: str, activity: dict) -> dict | None:
             "distance_km": activity.get("distance", 0) / 1000.0,
             "started_at": activity.get("start_date"),
             "finished_at": activity.get("start_date"), # approximate
+            "source": "strava",
         }
 
         # Process through territory engine
