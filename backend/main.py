@@ -931,7 +931,14 @@ async def _push_stats_loop(user_id: str, websocket: WebSocket):
                             "pace_min_km": pace,
                             "speed_ms": session.get("last_speed", 0),
                         }
-                    }))\n                    # Push Strava sync status if running\n                    sync_status = await r.get(f"strava_sync:{user_id}:status")\n                    if sync_status == "syncing":\n                        await websocket.send_text(json.dumps({\n                            "type": "strava_sync_status",\n                            "payload": {"status": "syncing"},\n                        }))
+                    }))
+                    # Push Strava sync status if running
+                    sync_status = await r.get(f"strava_sync:{user_id}:status")
+                    if sync_status == "syncing":
+                        await websocket.send_text(json.dumps({
+                            "type": "strava_sync_status",
+                            "payload": {"status": "syncing"},
+                        }))
 
             # Also push nearby runner positions
             nearby = await _get_nearby_runners(user_id, radius_km=5)
@@ -1676,6 +1683,38 @@ async def seed_test_data(claims: dict = Depends(require_any_auth)) -> dict[str, 
     await pipe.execute()
     return {"status": "seeded", "drivers": 3, "parents": 3}
 
+# ── User Stats ────────────────────────────────────────────────────────────────
+
+@app.get("/api/user/stats", tags=["stats"])
+async def user_stats(claims: dict = Depends(require_any_auth), db: AsyncSession = Depends(get_db)):
+    """Return cell_count, km2, and run_count for the authenticated user."""
+    user_id = claims.get("sub", "")
+
+    # Count owned cells
+    cell_result = await db.execute(
+        "SELECT COUNT(*) FROM cells WHERE owner_id = :uid",
+        {"uid": user_id},
+    )
+    cell_count = cell_result.scalar() or 0
+
+    # Compute km2 from cell count
+    sample = "8a2a100d2dfffff"
+    cell_area = h3.cell_area(sample, unit="km^2")
+    km2 = round(cell_count * cell_area, 4)
+
+    # Count completed runs
+    run_result = await db.execute(
+        "SELECT COUNT(*) FROM runs WHERE user_id = :uid AND status = 'finished'",
+        {"uid": user_id},
+    )
+    run_count = run_result.scalar() or 0
+
+    return {
+        "cell_count": cell_count,
+        "km2": km2,
+        "run_count": run_count,
+    }
+
 # ── New Backend API: Leaderboard, Territory, Competitions ────────────────────────
 
 @app.get("/api/leaderboard", tags=["stats"])
@@ -1744,7 +1783,16 @@ async def competitions(db: AsyncSession = Depends(get_db), token: dict = Depends
         })
     return {"competitions": comps}
 
-# ═══════════════ STRAVA INTEGRATION ═════════════════════════════════════════======\n\n@app.get("/api/strava/sync-status", tags=["strava"])\nasync def strava_sync_status(claims: dict = Depends(require_any_auth)):\n    """Check if a Strava sync is currently running for this user."""\n    user_id = claims.get("sub", "")\n    r = await get_redis()\n    status = await r.get(f"strava_sync:{user_id}:status")\n    return {"syncing": status == "syncing"}
+# ═══════════════ STRAVA INTEGRATION ═══════════════════════════════════════════
+
+@app.get("/api/strava/sync-status", tags=["strava"])
+async def strava_sync_status(claims: dict = Depends(require_any_auth)):
+    """Check if a Strava sync is currently running for this user."""
+    user_id = claims.get("sub", "")
+    r = await get_redis()
+    status = await r.get(f"strava_sync:{user_id}:status")
+    return {"syncing": status == "syncing"}
+
 
 @app.get("/api/strava/auth-url", tags=["strava"])
 async def strava_auth_url(claims: dict = Depends(require_any_auth)):
@@ -1778,7 +1826,32 @@ async def strava_status(claims: dict = Depends(require_any_auth)):
     return await get_strava_status(user_id)
 
 
-@app.post("/api/strava/sync", tags=["strava"])\nasync def strava_sync(claims: dict = Depends(require_any_auth)):\n    """Manually trigger a sync of recent Strava activities for the user."""\n    user_id = claims.get("sub", "")\n    r = await get_redis()\n    # Set sync status (TTL 5 min)\n    await r.setex(f"strava_sync:{user_id}:status", 300, "syncing")\n    # Notify client start\n    if user_id in active_connections:\n        await active_connections[user_id].send_text(json.dumps({\n            "type": "strava_sync_status",\n            "payload": {"status": "syncing"},\n        }))\n    result = {}\n    try:\n        result = await sync_user_activities(user_id)\n    finally:\n        # Clear status\n        await r.delete(f"strava_sync:{user_id}:status")\n        # Notify client complete\n        if user_id in active_connections:\n            await active_connections[user_id].send_text(json.dumps({\n                "type": "strava_sync_status",\n                "payload": {"status": "complete", **(result if isinstance(result, dict) else {})},\n            }))\n    return result
+@app.post("/api/strava/sync", tags=["strava"])
+async def strava_sync(claims: dict = Depends(require_any_auth)):
+    """Manually trigger a sync of recent Strava activities for the user."""
+    user_id = claims.get("sub", "")
+    r = await get_redis()
+    # Set sync status (TTL 5 min)
+    await r.setex(f"strava_sync:{user_id}:status", 300, "syncing")
+    # Notify client start
+    if user_id in active_connections:
+        await active_connections[user_id].send_text(json.dumps({
+            "type": "strava_sync_status",
+            "payload": {"status": "syncing"},
+        }))
+    result = {}
+    try:
+        result = await sync_user_activities(user_id)
+    finally:
+        # Clear status
+        await r.delete(f"strava_sync:{user_id}:status")
+        # Notify client complete
+        if user_id in active_connections:
+            await active_connections[user_id].send_text(json.dumps({
+                "type": "strava_sync_status",
+                "payload": {"status": "complete", **(result if isinstance(result, dict) else {})},
+            }))
+    return result
 
 
 @app.delete("/api/strava/disconnect", tags=["strava"])
